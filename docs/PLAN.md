@@ -29,17 +29,17 @@ and harden that pipeline FIRST. The frontend is just a consumer of a clean datas
 | Phase | Focus | Outcome | Status |
 |---|---|---|---|
 | **0** | Worker package scaffold, DB schema, migration runner | Pipeline skeleton runs | ✅ scaffolded |
-| **1** | `Event` protocol + connectors (TM, SeatGeek, EB, Luma, Funcheap) | Sources pluggable | ✅ TM done, rest stubbed |
+| **1** | `Event` protocol + connectors (TM, SeatGeek, EB, Luma, Funcheap) | Sources pluggable | ✅ all connectors implemented |
 | **2** | Geocoding (Nominatim + cache) | Every event has lat/lng | ✅ built |
 | **3** | **Deduplication engine** (scoring + blocking + merge) | One event = one row | ✅ scoring done + tested |
 | **3b** | **Lifecycle sweeper** (retire/remove ended + stale events) | Self-cleaning dataset | ✅ built |
-| **C** | Connect Neon, run migration, first real ingest | Real rows landing | ⬅ next (needs DATABASE_URL) |
-| **4** | Fill in connector `fetch()` bodies for all sources | Broad coverage | todo |
+| **C** | Connect Neon, run migration, first real ingest | Real rows landing | ⬅ next (owner supplies DATABASE_URL) |
+| **4** | Fill in connector `fetch()` bodies for all sources | Broad coverage | ✅ done (all sources; API keys env-gated, scrapers keyless) |
 | **5** | Curation / quality scoring tuning + review queue | Trustworthy dataset | todo |
-| **6** | Export `events.json` / read API | Data ready to serve | todo |
+| **6** | Export `events.json` / read API | Data ready to serve | ✅ export built (`npm run export` → `data/events.json`) |
 | **7** | Frontend: Vite+React+TS + MapLibre, markers, clustering, filters | The map | todo |
 | **8** | Aesthetic pass + user submissions | Polished + community | todo |
-| **9** | Cloudflare deploy: Workers + Cron + Hyperdrive | Live + self-updating | todo |
+| **9** | Cloudflare deploy: Workers + Cron + Hyperdrive | Live + self-updating | ⏳ GitHub Actions daily cron done; Cloudflare scaffolded (`worker/wrangler.toml.example`) |
 
 Phases 0–6 are the focus. Frontend (7+) waits until the dataset is solid.
 
@@ -127,8 +127,20 @@ re-normalize without re-fetching.
 - [x] **Database** — Postgres + PostGIS on Neon.
 - [x] **Host** — Cloudflare (Workers + Cron Triggers + Queues + Hyperdrive).
 - [x] **Sources** — all free APIs + scrapers; strictly zero-cost. Connectors for
-      Ticketmaster, SeatGeek, Eventbrite, Luma, Funcheap are scaffolded (Ticketmaster
-      `fetch()` is complete; the rest need their `fetch()` bodies filled in).
+      Ticketmaster, SeatGeek, Eventbrite, Luma, and Funcheap are all implemented.
+      API sources (TM, SeatGeek, Eventbrite) read keys from env and self-skip with a
+      logged notice when a key is absent; scrapers (Funcheap, Luma) need no keys and
+      rate-limit themselves.
+
+## Daily automation
+
+`.github/workflows/daily-ingest.yml` runs the full pipeline on a daily cron
+(migrate → ingest → sweep → export) and commits the refreshed `data/events.json`.
+It is the primary scheduler (zero extra infra). To turn it on, add the repo Actions
+secrets listed at the top of that workflow file — `DATABASE_URL` is required; the
+connector keys are optional and each source self-skips without its key. A Cloudflare
+Workers + Cron Triggers config is scaffolded in `worker/wrangler.toml.example` as the
+eventual Phase 9 target. Locally: `cd worker && npm run daily`. See `docs/RUNBOOK.md`.
 
 ## Getting started (next step)
 
