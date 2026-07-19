@@ -1,0 +1,25 @@
+{
+  "name": "sf-eventmap-worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Ingestion pipeline: fetch, normalize, geocode, dedupe, and retire Bay Area events.",
+  "scripts": {
+    "migrate": "tsx --env-file=.env src/db/migrate.ts",
+    "ingest": "tsx --env-file=.env src/pipeline/run.ts",
+    "sweep": "tsx --env-file=.env src/pipeline/lifecycle.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
+    "cheerio": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}
