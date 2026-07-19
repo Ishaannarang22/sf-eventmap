@@ -1,0 +1,18 @@
+{
+  "id": 5948190,
+  "title": "Tycho",
+  "type": "concert",
+  "url": "https://seatgeek.com/tycho-tickets/2026-06-30-the-fillmore",
+  "datetime_utc": "2026-07-01T03:00:00",
+  "datetime_local": "2026-06-30T20:00:00",
+  "venue": {
+    "name": "The Fillmore",
+    "address": "1805 Geary Blvd",
+    "extended_address": "San Francisco, CA 94115",
+    "timezone": "America/Los_Angeles",
+    "location": { "lat": 37.7842, "lon": -122.4329 }
+  },
+  "stats": { "lowest_price": 45, "highest_price": 120 },
+  "performers": [{ "image": "https://seatgeek.com/img/tycho.jpg" }],
+  "taxonomies": [{ "name": "concert" }, { "name": "music" }]
+}

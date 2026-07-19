@@ -1,0 +1,22 @@
+{
+  "id": "1234567890",
+  "name": { "text": "SF Tech Meetup" },
+  "description": { "text": "A gathering of Bay Area builders." },
+  "url": "https://www.eventbrite.com/e/sf-tech-meetup-1234567890",
+  "start": { "utc": "2026-07-15T01:00:00Z", "timezone": "America/Los_Angeles" },
+  "end": { "utc": "2026-07-15T04:00:00Z", "timezone": "America/Los_Angeles" },
+  "is_free": false,
+  "category_id": "102",
+  "logo": { "url": "https://img.evbuc.com/logo.jpg" },
+  "venue": {
+    "name": "SF Innovation Hub",
+    "address": { "localized_address_display": "123 Market St, San Francisco, CA" },
+    "latitude": "37.7936",
+    "longitude": "-122.3965"
+  },
+  "ticket_availability": {
+    "is_free": false,
+    "minimum_ticket_price": { "currency": "USD", "value": 1500 },
+    "maximum_ticket_price": { "currency": "USD", "value": 3000 }
+  }
+}
