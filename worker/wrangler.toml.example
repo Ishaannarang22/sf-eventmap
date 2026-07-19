@@ -1,0 +1,35 @@
+# Cloudflare Workers scaffold (Phase 9 of docs/PLAN.md) — SECONDARY to the GitHub
+# Action in .github/workflows/daily-ingest.yml, which needs zero extra infra and is
+# the primary automation. Copy this to `wrangler.toml` only when moving the schedule
+# onto Cloudflare Cron Triggers.
+#
+# Notes before this can run on Workers:
+#   - The pipeline currently uses Node built-ins (node:fs for the export, node:crypto).
+#     On Workers, `export` must write to R2/KV instead of the filesystem, and a
+#     Workers-compatible entry (src/worker.ts with a `scheduled` handler) is needed.
+#   - Reach Neon through Hyperdrive (connection pooling at the edge) — see PLAN.md.
+#   - Heavy multi-source scraping should fan out via Cloudflare Queues (one message
+#     per source/page) to stay within Worker CPU limits.
+
+name = "sf-eventmap-worker"
+main = "src/worker.ts"          # TODO: add a scheduled() handler entry for Workers
+compatibility_date = "2026-06-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Cron Triggers — mirror the GitHub Action cadence.
+[triggers]
+crons = [
+  "0 11 * * *",   # daily full pipeline: migrate + ingest + export
+  "5 * * * *",    # hourly lifecycle sweep (retire ended/stale events)
+]
+
+# Neon over the edge via Hyperdrive. Create with:
+#   npx wrangler hyperdrive create sf-eventmap --connection-string="$DATABASE_URL"
+# then paste the returned id here.
+# [[hyperdrive]]
+# binding = "HYPERDRIVE"
+# id = "<your-hyperdrive-id>"
+
+# Secrets are set with `npx wrangler secret put <NAME>` (never committed):
+#   DATABASE_URL, TICKETMASTER_API_KEY, SEATGEEK_CLIENT_ID, SEATGEEK_CLIENT_SECRET,
+#   EVENTBRITE_TOKEN, EVENTBRITE_ORG_ID

@@ -1,0 +1,99 @@
+# Daily ingestion pipeline for the SF Event Map.
+#
+# Runs the whole pipeline end to end on a schedule: migrate -> ingest -> sweep ->
+# export, then commits the refreshed data/events.json artifact back to the repo.
+#
+# ─── TO SWITCH THIS ON, add these repository Actions secrets ──────────────────
+#   (Settings ▸ Secrets and variables ▸ Actions ▸ New repository secret)
+#
+#   REQUIRED
+#     DATABASE_URL            Neon Postgres connection string (PostGIS enabled).
+#                             Without it every step fails fast with a clear error.
+#
+#   OPTIONAL — each connector self-skips (with a log notice) when its key is absent
+#     TICKETMASTER_API_KEY    developer.ticketmaster.com  (free)
+#     SEATGEEK_CLIENT_ID      platform.seatgeek.com       (free)
+#     SEATGEEK_CLIENT_SECRET  platform.seatgeek.com       (optional companion)
+#     EVENTBRITE_TOKEN        eventbrite.com/platform      (private OAuth token)
+#     EVENTBRITE_ORG_ID       pin a single Eventbrite org (optional)
+#
+#   Funcheap + Luma are scrapers and need no keys.
+#
+#   OPTIONAL — repository Actions *variables* (not secrets)
+#     NOMINATIM_USER_AGENT    contact string for OSM Nominatim fair use
+#     SCRAPER_USER_AGENT      contact string sent when scraping Funcheap / Luma
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: daily-ingest
+
+on:
+  schedule:
+    # 11:00 UTC daily ≈ 03:00–04:00 America/Los_Angeles (before the day's events).
+    - cron: '0 11 * * *'
+  workflow_dispatch: {} # allow manual runs from the Actions tab
+
+# Never let two ingests overlap (they share one database).
+concurrency:
+  group: daily-ingest
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # to commit the refreshed data/events.json
+    defaults:
+      run:
+        working-directory: worker
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      TICKETMASTER_API_KEY: ${{ secrets.TICKETMASTER_API_KEY }}
+      SEATGEEK_CLIENT_ID: ${{ secrets.SEATGEEK_CLIENT_ID }}
+      SEATGEEK_CLIENT_SECRET: ${{ secrets.SEATGEEK_CLIENT_SECRET }}
+      EVENTBRITE_TOKEN: ${{ secrets.EVENTBRITE_TOKEN }}
+      EVENTBRITE_ORG_ID: ${{ secrets.EVENTBRITE_ORG_ID }}
+      NOMINATIM_USER_AGENT: ${{ vars.NOMINATIM_USER_AGENT || 'sf-eventmap (github-actions)' }}
+      SCRAPER_USER_AGENT: ${{ vars.SCRAPER_USER_AGENT || 'sf-eventmap (github-actions)' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+
+      - name: Fail early if DATABASE_URL is not configured
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL secret is not set. Add it under Settings ▸ Secrets and variables ▸ Actions to enable the pipeline."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Migrate database schema
+        run: npm run migrate
+
+      - name: Ingest events from all sources
+        run: npm run ingest
+
+      - name: Sweep lifecycle (retire ended / stale events)
+        run: npm run sweep
+
+      - name: Export events.json
+        run: npm run export
+
+      - name: Commit refreshed events.json
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain data/events.json)" ]; then
+            git add data/events.json
+            git commit -m "chore(data): refresh events.json [skip ci]"
+            git push
+          else
+            echo "No changes to events.json."
+          fi
