@@ -5,9 +5,11 @@
   "type": "module",
   "description": "Ingestion pipeline: fetch, normalize, geocode, dedupe, and retire Bay Area events.",
   "scripts": {
-    "migrate": "tsx --env-file=.env src/db/migrate.ts",
-    "ingest": "tsx --env-file=.env src/pipeline/run.ts",
-    "sweep": "tsx --env-file=.env src/pipeline/lifecycle.ts",
+    "migrate": "tsx --env-file-if-exists=.env src/db/migrate.ts",
+    "ingest": "tsx --env-file-if-exists=.env src/pipeline/run.ts",
+    "sweep": "tsx --env-file-if-exists=.env src/pipeline/lifecycle.ts",
+    "export": "tsx --env-file-if-exists=.env src/pipeline/export.ts",
+    "daily": "npm run migrate && npm run ingest && npm run sweep && npm run export",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
